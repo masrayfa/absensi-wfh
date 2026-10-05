@@ -1,0 +1,25 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: absensi-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    # ponytail: default compose network; service-name DNS is enough for later app services. Add a named network only if isolation is needed.
+
+# Later todos append auth-service / employee-service / attendance-service / api-gateway here,
+# each with `depends_on: { mysql: { condition: service_healthy } }`.
+
+volumes:
+  mysql_data:

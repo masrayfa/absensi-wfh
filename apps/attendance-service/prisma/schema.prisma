@@ -1,0 +1,32 @@
+// attendance-service owns attendance_db. One row per employee per WIB business
+// day: `date` is the @db.Date business date, `checkInAt` the UTC instant.
+// employeeId/employeeName/userId are snapshots — identity joins by email across
+// services, never a cross-database foreign key.
+generator client {
+  provider = "prisma-client-js"
+  // App-local output: pnpm dedupes @prisma/client to one store path, so the
+  // default output would let the three services clobber each other's client.
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL_ATTENDANCE")
+}
+
+model Attendance {
+  id           String    @id @default(uuid())
+  employeeId   String
+  employeeName String
+  userId       String
+  date         DateTime  @db.Date
+  checkInAt    DateTime
+  checkOutAt   DateTime?
+  // Public path served at /uploads/<uuid>.<ext> — NEVER a filesystem path.
+  photoUrl     String
+  note         String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([employeeId, date])
+}

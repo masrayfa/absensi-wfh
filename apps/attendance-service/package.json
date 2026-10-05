@@ -1,0 +1,19 @@
+{
+  "name": "@app/attendance-service",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "prisma:generate": "prisma generate --schema prisma/schema.prisma",
+    "prisma:migrate": "dotenv -e ../../.env -- prisma migrate deploy --schema prisma/schema.prisma",
+    "seed": "prisma generate --schema prisma/schema.prisma && dotenv -e ../../.env -- tsx prisma/seed.ts",
+    "typecheck": "prisma generate --schema prisma/schema.prisma && tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "prisma": "6.19.3",
+    "tsx": "^4.23.15"
+  }
+}

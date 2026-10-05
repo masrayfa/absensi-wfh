@@ -1,8 +1,10 @@
 node_modules
 dist
+apps/*/generated/
 .env
 .env.*
 !/.env.example
-uploads/
+uploads/*
+!uploads/placeholder.png
 coverage
 *.log

@@ -1,0 +1,27 @@
+// auth-service owns auth_db. One schema per service (database-per-service).
+generator client {
+  provider = "prisma-client-js"
+  // App-local output: pnpm dedupes @prisma/client to one store path, so the
+  // default output would let the three services clobber each other's client.
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL_AUTH")
+}
+
+enum Role {
+  EMPLOYEE
+  HRD
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(EMPLOYEE)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

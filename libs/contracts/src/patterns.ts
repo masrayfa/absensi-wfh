@@ -1,0 +1,22 @@
+/**
+ * Cross-service TCP message patterns — the single source of truth.
+ * Every service and the gateway send/receive these strings; never inline a
+ * command literal anywhere else in the repo.
+ */
+export const TCP_PATTERNS = {
+  AUTH_LOGIN: 'AUTH_LOGIN',
+  AUTH_VALIDATE: 'AUTH_VALIDATE',
+  AUTH_CREATE_USER: 'AUTH_CREATE_USER',
+  AUTH_DEACTIVATE_USER: 'AUTH_DEACTIVATE_USER',
+  EMPLOYEE_CREATE: 'EMPLOYEE_CREATE',
+  EMPLOYEE_LIST: 'EMPLOYEE_LIST',
+  EMPLOYEE_GET_BY_EMAIL: 'EMPLOYEE_GET_BY_EMAIL',
+  EMPLOYEE_UPDATE: 'EMPLOYEE_UPDATE',
+  EMPLOYEE_DEACTIVATE: 'EMPLOYEE_DEACTIVATE',
+  ATTENDANCE_CHECK_IN: 'ATTENDANCE_CHECK_IN',
+  ATTENDANCE_CHECK_OUT: 'ATTENDANCE_CHECK_OUT',
+  ATTENDANCE_LIST: 'ATTENDANCE_LIST',
+  ATTENDANCE_GET: 'ATTENDANCE_GET',
+} as const;
+
+export type TcpPattern = (typeof TCP_PATTERNS)[keyof typeof TCP_PATTERNS];

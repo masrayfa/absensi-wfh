@@ -9,9 +9,14 @@ module.exports = tseslint.config(
     extends: [...tseslint.configs.recommended],
   },
   {
-    files: ['eslint.config.js'],
+    files: ['eslint.config.js', '**/*.cjs'],
     languageOptions: {
-      globals: { require: 'readonly', module: 'writable', __dirname: 'readonly' },
+      globals: {
+        require: 'readonly',
+        module: 'writable',
+        __dirname: 'readonly',
+        console: 'readonly',
+      },
     },
   },
 );

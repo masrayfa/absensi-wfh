@@ -19,3 +19,14 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+/** Human-readable message for a failed request; the API's own message wins. */
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const message = (error.response?.data as { message?: unknown } | undefined)?.message;
+    if (Array.isArray(message) && message.length > 0) return message.join(', ');
+    if (typeof message === 'string' && message) return message;
+    if (!error.response) return 'Tidak dapat menghubungi server. Coba lagi.';
+  }
+  return fallback;
+}

@@ -16,6 +16,8 @@ module.exports = tseslint.config(
         module: 'writable',
         __dirname: 'readonly',
         console: 'readonly',
+        process: 'readonly',
+        URL: 'readonly',
       },
     },
   },

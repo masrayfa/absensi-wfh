@@ -3,7 +3,7 @@ module.exports = {
   rootDir: __dirname,
   testEnvironment: 'node',
   roots: ['<rootDir>/test'],
-  testMatch: ['**/*.e2e-spec.ts'],
+  testMatch: ['**/*.e2e-spec.ts', '**/*.spec.ts'],
   transform: {
     '^.+\\.ts$': ['ts-jest', { tsconfig: '<rootDir>/test/tsconfig.json' }],
   },

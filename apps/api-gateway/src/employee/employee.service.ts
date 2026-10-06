@@ -80,14 +80,23 @@ export class EmployeeService {
     );
   }
 
+  /**
+   * Disables the login FIRST, then flips the employee row. If auth fails, the
+   * employee row is untouched (nothing lost, safe retry); if the row update
+   * fails after auth succeeded, the account is already locked out — the one
+   * failure mode that must never happen is an active login left behind.
+   * Errors propagate; unlike compensateCreate this is not best-effort.
+   */
   async deactivate(id: string): Promise<Employee> {
     const employee = await firstValueFrom(
-      this.employees.send<Employee>(TCP_PATTERNS.EMPLOYEE_DEACTIVATE, { id }),
+      this.employees.send<Employee>(TCP_PATTERNS.EMPLOYEE_GET_BY_ID, { id }),
     );
     await firstValueFrom(
       this.auth.send(TCP_PATTERNS.AUTH_DEACTIVATE_USER, { email: employee.email }),
     );
-    return employee;
+    return firstValueFrom(
+      this.employees.send<Employee>(TCP_PATTERNS.EMPLOYEE_DEACTIVATE, { id }),
+    );
   }
 
   /** Best-effort rollback; a failed rollback must not mask the original error. */

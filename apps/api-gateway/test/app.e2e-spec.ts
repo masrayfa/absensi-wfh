@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { readdirSync } from 'node:fs';
 import {
   INestApplication,
   INestMicroservice,
@@ -7,6 +8,7 @@ import {
 import { NestFactory } from '@nestjs/core';
 import { Transport } from '@nestjs/microservices';
 import { loadConfig, wibDateOf } from '@app/common';
+import { EmployeeStatus } from '@app/contracts';
 import request from 'supertest';
 import { AppModule as AttendanceAppModule } from '../../attendance-service/src/app.module';
 import { RpcHttpExceptionFilter as AttendanceRpcFilter } from '../../attendance-service/src/common/rpc-http-exception.filter';
@@ -16,6 +18,7 @@ import { AppModule as EmployeeAppModule } from '../../employee-service/src/app.m
 import { RpcHttpExceptionFilter as EmployeeRpcFilter } from '../../employee-service/src/common/rpc-http-exception.filter';
 import { AppModule as GatewayAppModule } from '../src/app.module';
 import { GatewayExceptionFilter } from '../src/common/gateway-exception.filter';
+import { uploadRoot } from '../src/common/uploads';
 
 const PASSWORD = 'Password123!';
 const DEFAULT_PASSWORD = 'Welcome123!';
@@ -83,6 +86,21 @@ describe('api-gateway e2e (real gateway -> real TCP services -> isolated MySQL t
       phone: '081200000017',
       joinDate: '2025-02-01',
     };
+  }
+
+  /** Fresh ACTIVE employee + a live JWT for them (password is the one-time default). */
+  async function createEmployeeWithLogin(
+    tag: string,
+  ): Promise<{ employee: EmployeeRow; token: string }> {
+    const email = `${tag}@dexa.test`;
+    const created = await api
+      .post('/employees')
+      .set(auth(hrdToken))
+      .send(employeePayload(`T17-${tag}`, email))
+      .expect(201);
+    const employee = created.body as EmployeeRow;
+    const token = (await login(email, DEFAULT_PASSWORD)).accessToken;
+    return { employee, token };
   }
 
   beforeAll(async () => {
@@ -186,25 +204,45 @@ describe('api-gateway e2e (real gateway -> real TCP services -> isolated MySQL t
       });
     });
 
-    it('deactivated-employee login is rejected with 401', async () => {
+    it('deactivating disables the login and blocks attendance with the still-valid JWT', async () => {
       const tag = unique('deactivate');
       const email = `${tag}@dexa.test`;
-
-      const created = await api
-        .post('/employees')
-        .set(auth(hrdToken))
-        .send(employeePayload(`T17-${tag}`, email))
-        .expect(201);
-      const employee = created.body as EmployeeRow;
-
-      await api.post('/auth/login').send({ email, password: DEFAULT_PASSWORD }).expect(200);
+      const { employee, token } = await createEmployeeWithLogin(tag);
 
       await api
         .patch(`/employees/${employee.id}/deactivate`)
         .set(auth(hrdToken))
         .expect(200);
 
+      // A fresh login is rejected...
       await api.post('/auth/login').send({ email, password: DEFAULT_PASSWORD }).expect(401);
+      // ...and the JWT issued before deactivation can no longer use attendance:
+      // the gateway verifies tokens offline, so the service must reject non-ACTIVE.
+      await api.get('/attendance/me').set(auth(token)).expect(403);
+    });
+
+    it('ignores status on create/update; deactivation stays on its own route', async () => {
+      const tag = unique('no-status');
+      const email = `${tag}@dexa.test`;
+
+      const created = await api
+        .post('/employees')
+        .set(auth(hrdToken))
+        .send({ ...employeePayload(`T17-${tag}`, email), status: 'INACTIVE' })
+        .expect(201);
+      const employee = created.body as EmployeeRow;
+      expect(employee.status).toBe(EmployeeStatus.ACTIVE);
+
+      const updated = await api
+        .patch(`/employees/${employee.id}`)
+        .set(auth(hrdToken))
+        .send({ fullName: 'T17 No Status', status: 'INACTIVE' })
+        .expect(200);
+      expect(updated.body).toMatchObject({
+        id: employee.id,
+        fullName: 'T17 No Status',
+        status: EmployeeStatus.ACTIVE,
+      });
     });
   });
 
@@ -242,8 +280,10 @@ describe('api-gateway e2e (real gateway -> real TCP services -> isolated MySQL t
         .expect(201);
       expect((second.body as AttendanceRow).id).toBe(checkedIn.id);
 
-      // The stored photo is served over the gateway's /uploads static route.
-      await api.get(checkedIn.photoUrl).expect(200);
+      // The stored photo is served over the gateway's /uploads static route,
+      // never sniffed into an active content type.
+      const photo = await api.get(checkedIn.photoUrl).expect(200);
+      expect(photo.headers['x-content-type-options']).toBe('nosniff');
     });
 
     it('check-in without a photo is rejected with 400', async () => {
@@ -259,6 +299,58 @@ describe('api-gateway e2e (real gateway -> real TCP services -> isolated MySQL t
       expect((listed.body as AttendanceRow[]).map((row) => row.id)).toContain(checkedIn.id);
 
       await api.get('/attendance').set(auth(budiToken)).expect(403);
+    });
+
+    it('rejects an SVG photo with 400 and writes no file', async () => {
+      const before = readdirSync(uploadRoot).sort();
+
+      await api
+        .post('/attendance/check-in')
+        .set(auth(budiToken))
+        .attach(
+          'photo',
+          Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script/></svg>'),
+          { filename: 'evil.svg', contentType: 'image/svg+xml' },
+        )
+        .expect(400);
+
+      expect(readdirSync(uploadRoot).sort()).toEqual(before);
+    });
+
+    it.each([
+      ['text/html', 'evil.html'],
+      ['application/javascript', 'evil.js'],
+    ])('rejects a %s photo with 400', async (contentType, filename) => {
+      await api
+        .post('/attendance/check-in')
+        .set(auth(budiToken))
+        .attach('photo', Buffer.from('active content'), { filename, contentType })
+        .expect(400);
+    });
+
+    it.each([
+      ['image/png', 'png'],
+      ['image/jpeg', 'jpg'],
+      ['image/webp', 'webp'],
+      ['image/gif', 'gif'],
+    ])('accepts %s and stores the extension from the allowlist', async (contentType, ext) => {
+      const tag = unique(`mime-${ext}`);
+      const { token } = await createEmployeeWithLogin(tag);
+
+      const res = await api
+        .post('/attendance/check-in')
+        .set(auth(token))
+        // Deliberately wrong originalname: the stored extension comes from the
+        // mimetype allowlist, never from client input.
+        .attach('photo', Buffer.from('raster-bytes'), {
+          filename: 'payload.html',
+          contentType,
+        })
+        .expect(201);
+
+      expect((res.body as AttendanceRow).photoUrl).toMatch(
+        new RegExp(`^/uploads/[0-9a-f-]+\\.${ext}$`),
+      );
     });
   });
 });

@@ -44,10 +44,6 @@ export class CreateEmployeeDto {
 
   @IsDateString()
   joinDate!: string;
-
-  @IsOptional()
-  @IsEnum(EmployeeStatus)
-  status?: EmployeeStatus;
 }
 
 export class UpdateEmployeeDto {
@@ -77,10 +73,6 @@ export class UpdateEmployeeDto {
   @IsOptional()
   @IsDateString()
   joinDate?: string;
-
-  @IsOptional()
-  @IsEnum(EmployeeStatus)
-  status?: EmployeeStatus;
 }
 
 /**

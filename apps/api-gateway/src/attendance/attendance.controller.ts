@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { extname } from 'node:path';
 import {
   BadRequestException,
   Controller,
@@ -26,6 +25,20 @@ import { AttendanceService } from './attendance.service';
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
+/**
+ * Raster-only allowlist: accepted mimetype -> stored extension. The stored
+ * extension is looked up here, never taken from the client filename, so an
+ * `.html`/`.svg`/`.js` upload can neither pass the filter nor be stored with
+ * its original extension. `image/svg+xml` is deliberately absent: SVG is
+ * active content and would be scriptable when served back to a browser.
+ */
+const PHOTO_EXTENSIONS: Readonly<Record<string, string>> = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+};
+
 @ApiTags('attendance')
 @ApiBearerAuth()
 @Controller('attendance')
@@ -39,14 +52,16 @@ export class AttendanceController {
       storage: diskStorage({
         destination: uploadRoot,
         filename: (_req, file, cb) => {
-          const ext = extname(file.originalname).toLowerCase();
-          cb(null, `${randomUUID()}${/^\.[a-z0-9]+$/.test(ext) ? ext : ''}`);
+          cb(null, `${randomUUID()}${PHOTO_EXTENSIONS[file.mimetype] ?? ''}`);
         },
       }),
       limits: { fileSize: MAX_PHOTO_BYTES },
       fileFilter: (_req, file, cb) => {
-        if (!file.mimetype.startsWith('image/')) {
-          cb(new BadRequestException('photo must be an image'), false);
+        if (!PHOTO_EXTENSIONS[file.mimetype]) {
+          cb(
+            new BadRequestException('photo must be a PNG, JPEG, WebP, or GIF image'),
+            false,
+          );
           return;
         }
         cb(null, true);

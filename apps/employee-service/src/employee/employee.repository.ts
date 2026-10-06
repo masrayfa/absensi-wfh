@@ -5,7 +5,11 @@ import {
 } from '@app/contracts';
 import { PrismaService } from '../prisma/prisma.service';
 
-/** Fields accepted on create. `joinDate` is already a Date (converted by service). */
+/**
+ * Fields accepted on create. `joinDate` is already a Date (converted by service).
+ * `status` is absent by design: the schema default (ACTIVE) is the only state a
+ * new employee can be born in; deactivation is a dedicated repository method.
+ */
 export interface EmployeeCreateData {
   employeeNo: string;
   fullName: string;
@@ -14,17 +18,15 @@ export interface EmployeeCreateData {
   position: string;
   phone?: string;
   joinDate: Date;
-  status?: EmployeeStatus;
 }
 
-/** Mutable fields on update. `employeeNo` and `email` are immutable. */
+/** Mutable fields on update. `employeeNo`, `email`, and `status` are not update-able. */
 export interface EmployeeUpdateData {
   fullName?: string;
   department?: string;
   position?: string;
   phone?: string;
   joinDate?: Date;
-  status?: EmployeeStatus;
 }
 
 /**

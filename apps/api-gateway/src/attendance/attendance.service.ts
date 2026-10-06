@@ -1,6 +1,10 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { ListAttendanceQueryDto, TCP_PATTERNS } from '@app/contracts';
+import {
+  EmployeeStatus,
+  ListAttendanceQueryDto,
+  TCP_PATTERNS,
+} from '@app/contracts';
 import { firstValueFrom } from 'rxjs';
 import { CLIENT_ATTENDANCE, CLIENT_EMPLOYEE } from '../common/clients';
 import type { Employee } from '../employee/employee.service';
@@ -75,10 +79,19 @@ export class AttendanceService {
     );
   }
 
-  /** The JWT email maps to exactly one employee; employee-service 404s if absent. */
-  private currentEmployee(email: string): Promise<Employee> {
-    return firstValueFrom(
+  /**
+   * The JWT email maps to exactly one employee; employee-service 404s if absent.
+   * The gateway verifies the JWT offline, so a deactivated employee's token can
+   * still be valid: attendance itself must reject any non-ACTIVE row, otherwise
+   * a deactivated account keeps checking in/out and reading history.
+   */
+  private async currentEmployee(email: string): Promise<Employee> {
+    const employee = await firstValueFrom(
       this.employees.send<Employee>(TCP_PATTERNS.EMPLOYEE_GET_BY_EMAIL, { email }),
     );
+    if (employee.status !== EmployeeStatus.ACTIVE) {
+      throw new ForbiddenException('Employee account is deactivated');
+    }
+    return employee;
   }
 }

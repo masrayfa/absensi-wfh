@@ -24,7 +24,15 @@ mkdirSync(uploadRoot, { recursive: true });
       signOptions: { expiresIn: '8h' },
     }),
     TcpClientsModule,
-    ServeStaticModule.forRoot({ rootPath: uploadRoot, serveRoot: '/uploads' }),
+    ServeStaticModule.forRoot({
+      rootPath: uploadRoot,
+      serveRoot: '/uploads',
+      // Never let a browser sniff an upload's Content-Type: stored files are
+      // user-supplied bytes served from our origin.
+      serveStaticOptions: {
+        setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
+      },
+    }),
     AuthModule,
     EmployeeModule,
     AttendanceModule,

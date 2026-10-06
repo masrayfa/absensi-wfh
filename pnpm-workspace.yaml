@@ -14,6 +14,8 @@ allowBuilds:
   '@parcel/watcher': true
   '@prisma/client': true
   '@prisma/engines': true
+  # Telemetry package pulled in by @nestjs/swagger; never run its install script.
+  '@scarf/scarf': false
   esbuild: true
   prisma: true
   unrs-resolver: true

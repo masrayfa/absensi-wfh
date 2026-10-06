@@ -7,6 +7,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { JwtAuthGuard, RolesGuard, loadConfig } from '@app/common';
 import { AuthModule } from './auth/auth.module';
+import { EmployeeModule } from './employee/employee.module';
 import { HealthModule } from './health/health.module';
 import { TcpClientsModule } from './common/tcp-clients.module';
 
@@ -26,6 +27,7 @@ mkdirSync(uploadRoot, { recursive: true });
     TcpClientsModule,
     ServeStaticModule.forRoot({ rootPath: uploadRoot, serveRoot: '/uploads' }),
     AuthModule,
+    EmployeeModule,
     HealthModule,
   ],
   providers: [

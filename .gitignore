@@ -8,3 +8,7 @@ uploads/*
 !uploads/placeholder.png
 coverage
 *.log
+
+# local agent/QA tooling artifacts (not part of the deliverable)
+/.omo/
+/.playwright-mcp/

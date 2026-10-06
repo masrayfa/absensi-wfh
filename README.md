@@ -51,6 +51,21 @@ Two use cases, exactly as briefed:
 - Photo files are saved by the gateway; the attendance row stores the public path
   `/uploads/<uuid>.<ext>`.
 
+## Documentation
+
+Deep-dive docs live under [`docs/`](docs/README.md):
+
+| Doc | What it covers |
+|---|---|
+| [docs/README.md](docs/README.md) | Index, doc map, repo layout |
+| [docs/architecture.md](docs/architecture.md) | Components, ports, data model, why it is microservices |
+| [docs/decisions.md](docs/decisions.md) | ADR-style decision log (context / decision / consequences) |
+| [docs/features.md](docs/features.md) | UC1 employee + UC2 HRD behavior, rules, what is NOT built |
+| [docs/how-it-works.md](docs/how-it-works.md) | Request flows through real files, error mapping, guards, WIB dates |
+| [docs/development.md](docs/development.md) | Bootstrap (Docker + native), scripts, tests, env vars, adding a TCP command |
+| [docs/api.md](docs/api.md) | Full endpoint reference: roles, bodies, error codes |
+| [docs/security-and-limitations.md](docs/security-and-limitations.md) | Security posture and honest known limitations |
+
 ## Prerequisites
 
 - **Node.js 20+** and **pnpm** (`corepack enable` or `npm i -g pnpm`)

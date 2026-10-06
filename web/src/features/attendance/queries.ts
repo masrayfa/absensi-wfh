@@ -16,13 +16,25 @@ export interface AttendanceRecord {
   note: string | null;
 }
 
+/** Inclusive WIB business-date bounds (`YYYY-MM-DD`) for the history filter. */
+export interface AttendanceRange {
+  from?: string;
+  to?: string;
+}
+
+/** Query-key prefix: every range variant starts here, so one invalidate covers them all. */
 const myAttendanceKey = ['attendance', 'me'] as const;
 
-/** The caller's own records, newest first (GET /attendance/me). */
-export function useMyAttendance() {
+/** The caller's own records, newest first (GET /attendance/me?from&to). */
+export function useMyAttendance({ from, to }: AttendanceRange = {}) {
   return useQuery({
-    queryKey: myAttendanceKey,
-    queryFn: async () => (await api.get<AttendanceRecord[]>('/attendance/me')).data,
+    queryKey: [...myAttendanceKey, { from, to }],
+    queryFn: async () =>
+      (
+        await api.get<AttendanceRecord[]>('/attendance/me', {
+          params: { from: from || undefined, to: to || undefined },
+        })
+      ).data,
   });
 }
 

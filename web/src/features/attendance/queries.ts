@@ -25,6 +25,14 @@ export interface AttendanceRange {
 /** Query-key prefix: every range variant starts here, so one invalidate covers them all. */
 const myAttendanceKey = ['attendance', 'me'] as const;
 
+/** Shared root for every attendance cache entry (own history + HRD list). */
+const attendanceKey = ['attendance'] as const;
+
+/** HRD list filters; every field is optional and applied server-side. */
+export interface AttendanceFilter extends AttendanceRange {
+  employeeId?: string;
+}
+
 /** The caller's own records, newest first (GET /attendance/me?from&to). */
 export function useMyAttendance({ from, to }: AttendanceRange = {}) {
   return useQuery({
@@ -33,6 +41,23 @@ export function useMyAttendance({ from, to }: AttendanceRange = {}) {
       (
         await api.get<AttendanceRecord[]>('/attendance/me', {
           params: { from: from || undefined, to: to || undefined },
+        })
+      ).data,
+  });
+}
+
+/** All submitted records, newest first (HRD-only GET /attendance?employeeId&from&to). */
+export function useAttendance({ employeeId, from, to }: AttendanceFilter = {}) {
+  return useQuery({
+    queryKey: [...attendanceKey, 'list', { employeeId, from, to }],
+    queryFn: async () =>
+      (
+        await api.get<AttendanceRecord[]>('/attendance', {
+          params: {
+            employeeId: employeeId || undefined,
+            from: from || undefined,
+            to: to || undefined,
+          },
         })
       ).data,
   });

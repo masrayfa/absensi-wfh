@@ -6,6 +6,17 @@ import { afterEach, vi } from 'vitest';
 URL.createObjectURL = vi.fn((file: Blob) => `blob:${(file as File).name || 'preview'}`);
 URL.revokeObjectURL = vi.fn();
 
+// jsdom lacks pointer capture and ResizeObserver, which Radix primitives (Select) touch.
+Element.prototype.hasPointerCapture = vi.fn(() => false);
+Element.prototype.setPointerCapture = vi.fn();
+Element.prototype.releasePointerCapture = vi.fn();
+Element.prototype.scrollIntoView = vi.fn();
+globalThis.ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 afterEach(() => {
   cleanup();
 });

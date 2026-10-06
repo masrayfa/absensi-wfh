@@ -126,6 +126,50 @@ describe('EmployeesPage', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
+  it('updates an employee through the edit dialog and refreshes the list', async () => {
+    const updated: Employee = { ...BUDI, department: 'Product', position: 'Staff' };
+    get.mockResolvedValueOnce({ data: [BUDI] } as never).mockResolvedValue({ data: [updated] } as never);
+    patch.mockResolvedValue({ data: updated } as never);
+    renderPage();
+
+    const user = userEvent.setup();
+    await screen.findByText('Budi Santoso');
+    await user.click(screen.getByRole('button', { name: 'Edit Budi Santoso' }));
+
+    // Edit mode: employeeNo is hidden (immutable), email is prefilled but disabled.
+    await screen.findByRole('dialog');
+    expect(screen.getByText('Ubah Karyawan')).toBeInTheDocument();
+    expect(screen.queryByLabelText('NIP')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toHaveValue('budi@dexa.test');
+    expect(screen.getByLabelText('Email')).toBeDisabled();
+
+    await user.clear(screen.getByLabelText('Departemen'));
+    await user.type(screen.getByLabelText('Departemen'), 'Product');
+    await user.clear(screen.getByLabelText('Posisi'));
+    await user.type(screen.getByLabelText('Posisi'), 'Staff');
+    await user.click(screen.getByRole('button', { name: 'Simpan' }));
+
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith(
+        '/employees/emp-budi',
+        expect.objectContaining({
+          fullName: 'Budi Santoso',
+          email: 'budi@dexa.test',
+          department: 'Product',
+          position: 'Staff',
+          joinDate: '2024-01-15',
+        }),
+      ),
+    );
+    expect(patch.mock.calls[0][1]).not.toHaveProperty('employeeNo');
+
+    // Invalidation refetches the list, which now carries the updated fields.
+    expect(await screen.findByText('Product')).toBeInTheDocument();
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+    expect(toast.success).toHaveBeenCalledWith('Karyawan diperbarui');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
   it('keeps the dialog open and surfaces a conflict toast on a duplicate NIP', async () => {
     get.mockResolvedValue({ data: [] } as never);
     post.mockRejectedValue({

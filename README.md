@@ -60,6 +60,41 @@ Two use cases, exactly as briefed:
 
 ## Bootstrap
 
+### 0. One command — full stack in Docker (authored; not executed on the authoring machine)
+
+```bash
+docker compose up -d          # first run builds 5 images; later runs are instant
+docker compose ps             # wait until mysql + 3 services + gateway + web are healthy
+```
+
+That single command brings up MySQL 8, the three TCP services, the HTTP gateway, and the
+nginx-served SPA. Each backend container runs `prisma migrate deploy` + its idempotent seed
+at boot, so a fresh volume needs **no manual DB step**.
+
+| URL | What |
+|---|---|
+| http://localhost:5173 | web (nginx serving the built SPA, published from the container's :80) |
+| http://localhost:3000/docs | gateway Swagger |
+| http://localhost:3000/health | gateway liveness |
+
+Seeded logins are the same as below (`hrd@dexa.test` / `Password123!`).
+
+Notes:
+
+- **Host/DNS difference:** inside compose the services reach MySQL at host `mysql`, so the
+  compose file hardcodes `mysql://root:…@mysql:3306/<schema>`. The root `.env` keeps
+  `localhost` for the native path (2b). Compose only reads `.env` for
+  `MYSQL_ROOT_PASSWORD` / `JWT_SECRET` interpolation.
+- **`VITE_API_URL`** is a Web image **build arg** (default `http://localhost:3000`); Vite bakes
+  it into the bundle. Override with
+  `VITE_API_URL=https://api.example.com docker compose build web`.
+- **Uploads** live on the named volume `uploads` (mounted at `/uploads` in the gateway), so
+  photos survive `docker compose down`. Add `-v` to drop it together with `mysql_data`.
+- **Honesty note:** Docker was **not installed on the machine this test was authored on**;
+  the images and compose wiring are authored and **statically validated** (YAML parse +
+  Dockerfile structure assertions, see `.omo/evidence/t20-compose.txt`), but
+  `docker compose up` was **not executed here**. The native path (2b + 3) is the verified one.
+
 ### 1. Environment (both paths)
 
 ```bash
@@ -72,7 +107,7 @@ with `dotenv -e ../../.env`.
 ### 2a. Database — Docker MySQL
 
 ```bash
-docker compose up -d
+docker compose up -d mysql
 docker compose ps             # wait for mysql: healthy
 ```
 
@@ -80,6 +115,7 @@ docker compose ps             # wait for mysql: healthy
 
 > **Note:** Docker was **not installed on the machine this test was authored on**, so this path
 > is authored but was not executed here. The native path below is the verified one.
+> For the whole stack in one command instead of just MySQL, see **0**.
 
 ### 2b. Database — native MySQL 8 (verified path)
 

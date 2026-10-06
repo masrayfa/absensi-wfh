@@ -18,8 +18,128 @@ services:
       start_period: 30s
     # ponytail: default compose network; service-name DNS is enough for later app services. Add a named network only if isolation is needed.
 
-# Later todos append auth-service / employee-service / attendance-service / api-gateway here,
-# each with `depends_on: { mysql: { condition: service_healthy } }`.
+  # Backend images build from the repo root (pnpm workspace). Containers reach
+  # MySQL at host `mysql` — NOT localhost — so the connection URLs are written
+  # here explicitly instead of reusing the native `.env` URLs (which stay on
+  # localhost for the non-Docker workflow).
+  auth-service:
+    build:
+      context: .
+      dockerfile: apps/auth-service/Dockerfile
+    container_name: absensi-auth-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL_AUTH: mysql://root:${MYSQL_ROOT_PASSWORD:-root}@mysql:3306/auth_db
+      JWT_SECRET: ${JWT_SECRET:-dev-insecure-secret-change-me}
+      AUTH_TCP_PORT: ${AUTH_TCP_PORT:-4001}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const s=require('net').connect(Number(process.env.AUTH_TCP_PORT||4001),'127.0.0.1');s.on('connect',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  employee-service:
+    build:
+      context: .
+      dockerfile: apps/employee-service/Dockerfile
+    container_name: absensi-employee-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL_EMPLOYEE: mysql://root:${MYSQL_ROOT_PASSWORD:-root}@mysql:3306/employee_db
+      EMPLOYEE_TCP_PORT: ${EMPLOYEE_TCP_PORT:-4002}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const s=require('net').connect(Number(process.env.EMPLOYEE_TCP_PORT||4002),'127.0.0.1');s.on('connect',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  attendance-service:
+    build:
+      context: .
+      dockerfile: apps/attendance-service/Dockerfile
+    container_name: absensi-attendance-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL_ATTENDANCE: mysql://root:${MYSQL_ROOT_PASSWORD:-root}@mysql:3306/attendance_db
+      ATTENDANCE_TCP_PORT: ${ATTENDANCE_TCP_PORT:-4003}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const s=require('net').connect(Number(process.env.ATTENDANCE_TCP_PORT||4003),'127.0.0.1');s.on('connect',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    container_name: absensi-api-gateway
+    restart: unless-stopped
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-dev-insecure-secret-change-me}
+      GATEWAY_PORT: ${GATEWAY_PORT:-3000}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:5173}
+      # Photos live on the shared named volume, served by the gateway at /uploads.
+      UPLOAD_DIR: /uploads
+      # Compose service DNS names (native dev keeps the 127.0.0.1 default).
+      AUTH_TCP_HOST: auth-service
+      EMPLOYEE_TCP_HOST: employee-service
+      ATTENDANCE_TCP_HOST: attendance-service
+      AUTH_TCP_PORT: ${AUTH_TCP_PORT:-4001}
+      EMPLOYEE_TCP_PORT: ${EMPLOYEE_TCP_PORT:-4002}
+      ATTENDANCE_TCP_PORT: ${ATTENDANCE_TCP_PORT:-4003}
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads:/uploads
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      employee-service:
+        condition: service_healthy
+      attendance-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:'+(process.env.GATEWAY_PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        # Baked into the SPA bundle at build time; the browser calls this URL.
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+    container_name: absensi-web
+    restart: unless-stopped
+    ports:
+      # Container listens on 80; published on 5173 for parity with `pnpm dev`
+      # and with WEB_ORIGIN's CORS default.
+      - "5173:80"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
 
 volumes:
   mysql_data:
+  uploads:

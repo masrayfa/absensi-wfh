@@ -17,17 +17,17 @@ const config = loadConfig();
       {
         name: CLIENT_AUTH,
         transport: Transport.TCP,
-        options: { host: '127.0.0.1', port: config.authTcpPort },
+        options: { host: config.authTcpHost, port: config.authTcpPort },
       },
       {
         name: CLIENT_EMPLOYEE,
         transport: Transport.TCP,
-        options: { host: '127.0.0.1', port: config.employeeTcpPort },
+        options: { host: config.employeeTcpHost, port: config.employeeTcpPort },
       },
       {
         name: CLIENT_ATTENDANCE,
         transport: Transport.TCP,
-        options: { host: '127.0.0.1', port: config.attendanceTcpPort },
+        options: { host: config.attendanceTcpHost, port: config.attendanceTcpPort },
       },
     ]),
   ],

@@ -5,7 +5,16 @@
     "moduleResolution": "node",
     "outDir": "dist",
     "rootDir": ".",
-    "types": ["node"]
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
+    "types": ["node", "jest"],
+    "baseUrl": "../..",
+    "paths": {
+      "@app/contracts": ["libs/contracts/dist/index.d.ts"],
+      "@app/common": ["libs/common/dist/index.d.ts"]
+    }
   },
-  "include": ["prisma/**/*.ts"]
+  "include": ["src/**/*.ts", "prisma/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

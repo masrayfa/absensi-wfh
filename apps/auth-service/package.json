@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "dotenv -e ../../.env -- ts-node --transpile-only -P tsconfig.json src/main.ts",
+    "dev": "dotenv -e ../../.env -- ts-node --transpile-only -P tsconfig.json src/main.ts",
     "typecheck": "prisma generate --schema prisma/schema.prisma && tsc -p tsconfig.json --noEmit",
     "test": "node ../../tools/backend-test.cjs --provision auth",
     "prisma:generate": "prisma generate --schema prisma/schema.prisma",

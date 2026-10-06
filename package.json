@@ -4,7 +4,8 @@
   "private": true,
   "packageManager": "pnpm@11.5.3",
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
+    "dev": "pnpm build:libs && pnpm -r --parallel dev",
+    "build:libs": "pnpm --filter \"./libs/*\" build",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",

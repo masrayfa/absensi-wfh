@@ -51,6 +51,8 @@ dexa-group-takehome-test/
 └── README.md                 quickstart, stack table, deliverable checklist
 ```
 
+The web app has its own notes in [web/README.md](../web/README.md).
+
 Prisma schemas and migrations live per service under `apps/<service>/prisma/`.
 Generated Prisma clients are app-local (`apps/<service>/generated/client`, gitignored).
 

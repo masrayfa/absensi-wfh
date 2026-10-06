@@ -10,3 +10,7 @@ pnpm --filter web build
 ```
 
 API base URL: `VITE_API_URL` (default `http://localhost:3000`).
+
+---
+
+Part of the Absensi WFH monorepo. Start at the [root README](../README.md) and the [documentation index](../docs/README.md).

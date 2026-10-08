@@ -8,7 +8,7 @@ Two use cases, exactly as briefed:
 1. **Karyawan (employee)** — logs in, checks in for the day with a **required photo**,
    the server records the timestamp (business day Asia/Jakarta / WIB), and the employee
    sees their own attendance history.
-2. **HRD (admin)** — logs in, manages master karyawan (create / update / deactivate) and
+2. **HRD (admin)** — logs in, manages master karyawan (create / update / deactivate / delete) and
    views submitted attendance **read-only**, including the photo.
 
 ## Stack
@@ -199,6 +199,7 @@ All protected routes require `Authorization: Bearer <jwt>`.
 | GET | `/employees/{id}` | HRD | employee detail |
 | PATCH | `/employees/{id}` | HRD | update employee |
 | PATCH | `/employees/{id}/deactivate` | HRD | soft-deactivate employee + disable login |
+| DELETE | `/employees/{id}` | HRD | hard delete (INACTIVE only) + delete login |
 | POST | `/attendance/check-in` | EMPLOYEE | **multipart** check-in, `photo` field required |
 | POST | `/attendance/check-out` | EMPLOYEE | close today's attendance |
 | GET | `/attendance/me` | EMPLOYEE | own history (newest first) |
@@ -251,7 +252,7 @@ Web tests run with Vitest + React Testing Library (axios mocked at the module se
 | 2a.i Proper DB structure | 3 per-service schemas, Prisma migrations, unique indexes (`User.email`, `Employee.employeeNo/email`, `Attendance(employeeId,date)`) |
 | 2a.ii DB connectivity | Prisma Client per service, `DATABASE_URL_*` from `.env` |
 | 2a.iii Microservices concept | gateway → auth/employee/attendance over TCP; contracts in `libs/contracts` |
-| 2a.iv CRUD via API | employee CRUD + deactivate (gateway `/employees`), attendance create/read (`/attendance`), users managed by auth-service |
+| 2a.iv CRUD via API | employee CRUD + deactivate + hard delete (gateway `/employees`), attendance create/read (`/attendance`), users managed by auth-service |
 | 2b.i Screens | `/login`, `/absen`, `/riwayat`, `/hrd/karyawan`, `/hrd/monitoring` (`web/src/features/*`) |
 | 2b.ii Frontend calls API | axios client `web/src/lib/api.ts` + TanStack Query hooks per feature |
 | 2b.iii Custom components | `web/src/components/app/PhotoUpload.tsx`, `web/src/components/app/AttendanceTable.tsx`, `web/src/features/employees/EmployeeFormDialog.tsx` |

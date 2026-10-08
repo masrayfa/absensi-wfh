@@ -10,7 +10,7 @@ Two use cases, exactly as briefed:
    photo**, the server records the timestamp on the Asia/Jakarta (WIB) business
    day, and the employee sees their own attendance history.
 2. **HRD (admin)**, logs in, manages master karyawan (create / update /
-   deactivate) and views submitted attendance **read-only**, including the photo.
+   deactivate / delete) and views submitted attendance **read-only**, including the photo.
 
 Seeded demo logins: `hrd@dexa.test`, `budi@dexa.test`, `siti@dexa.test`,
 `andi@dexa.test`, all with password `Password123!`. Employees created from the

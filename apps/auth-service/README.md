@@ -12,7 +12,7 @@ pnpm --filter @app/auth-service seed           # demo logins (hrd@dexa.test / Pa
 
 - DB: `DATABASE_URL_AUTH`, schema `prisma/schema.prisma`, model `User` (email, passwordHash, role, isActive)
 - Entry: `src/main.ts` → `src/auth/auth.controller.ts` (MessagePattern handlers) → `src/user/user.repository.ts`
-- Handles: `AUTH_LOGIN`, `AUTH_VALIDATE`, `AUTH_CREATE_USER`, `AUTH_DEACTIVATE_USER` (patterns in `libs/contracts`)
+- Handles: `AUTH_LOGIN`, `AUTH_VALIDATE`, `AUTH_CREATE_USER`, `AUTH_DEACTIVATE_USER`, `AUTH_DELETE_USER` (patterns in `libs/contracts`)
 - Errors serialize to `{statusCode, message}` via `src/common/rpc-http-exception.filter.ts`
 - Docs: [`docs/architecture.md`](../../docs/architecture.md) · [`docs/how-it-works.md`](../../docs/how-it-works.md)
 

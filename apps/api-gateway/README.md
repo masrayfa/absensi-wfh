@@ -10,7 +10,7 @@ pnpm --filter @app/api-gateway test       # e2e via tools/backend-test.cjs (prov
 
 - Entry: `src/main.ts` (ValidationPipe, `GatewayExceptionFilter`, CORS, Swagger), `src/app.module.ts` (`JwtAuthGuard` + `RolesGuard` as `APP_GUARD`, static uploads)
 - TCP clients: `src/common/tcp-clients.module.ts` — `ClientProxy` tokens `AUTH` / `EMPLOYEE` / `ATTENDANCE`
-- Routes: `auth` (login `@Public`, me), `employees` (HRD), `attendance` (check-in/out/me = EMPLOYEE, list/get = HRD), `health` (`@Public`)
+- Routes: `auth` (login `@Public`, me), `employees` (HRD, incl. `DELETE /employees`), `attendance` (check-in/out/me = EMPLOYEE, list/get = HRD), `health` (`@Public`)
 - Thin orchestrators: each `*.service.ts` is `client.send(TCP_PATTERNS.X, dto)` + `firstValueFrom`
 - Docs: [`docs/architecture.md`](../../docs/architecture.md) · [`docs/api.md`](../../docs/api.md)
 

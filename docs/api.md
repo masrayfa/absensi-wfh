@@ -217,7 +217,7 @@ The login user is auto-provisioned in auth-service with bcrypt hash of
 
 ---
 
-### GET /employees/{id}
+### GET /employees/{id}<!-- attr-guard: trailing {} is parsed as attrs by MPE -->
 
 | | |
 |---|---|
@@ -231,7 +231,7 @@ The login user is auto-provisioned in auth-service with bcrypt hash of
 
 ---
 
-### PATCH /employees/{id}
+### PATCH /employees/{id}<!-- attr-guard: trailing {} is parsed as attrs by MPE -->
 
 | | |
 |---|---|
@@ -394,7 +394,7 @@ There is no POST/PATCH/DELETE on attendance for any role.
 
 ---
 
-### GET /attendance/{id}
+### GET /attendance/{id}<!-- attr-guard: trailing {} is parsed as attrs by MPE -->
 
 | | |
 |---|---|

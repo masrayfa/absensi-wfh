@@ -30,6 +30,8 @@ HRD UI get the one-time password `Welcome123!`.
 
 Each doc links back to this index and to related docs.
 
+Agents: start at [AGENTS.md](../AGENTS.md) — short service map, repo rules, and pointers here.
+
 ## Repo layout
 
 ```
@@ -48,10 +50,11 @@ dexa-group-takehome-test/
 ├── uploads/                  photo files served at /uploads (gitignored except placeholder.png)
 ├── docker-compose.yml
 ├── .env.example              all env vars documented
-└── README.md                 quickstart, stack table, deliverable checklist
+├── README.md                 quickstart, stack table, deliverable checklist
+└── AGENTS.md                 agent entry point: service map + rules, links here
 ```
 
-The web app has its own notes in [web/README.md](../web/README.md).
+Each `apps/<app>/README.md` has per-service context (role, port, schema, TCP patterns, commands): [api-gateway](../apps/api-gateway/README.md), [auth-service](../apps/auth-service/README.md), [employee-service](../apps/employee-service/README.md), [attendance-service](../apps/attendance-service/README.md). The web app has its own notes in [web/README.md](../web/README.md).
 
 Prisma schemas and migrations live per service under `apps/<service>/prisma/`.
 Generated Prisma clients are app-local (`apps/<service>/generated/client`, gitignored).

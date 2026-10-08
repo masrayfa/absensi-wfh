@@ -65,6 +65,8 @@ Deep-dive docs live under [`docs/`](docs/README.md):
 | [docs/development.md](docs/development.md) | Bootstrap (Docker + native), scripts, tests, env vars, adding a TCP command |
 | [docs/api.md](docs/api.md) | Full endpoint reference: roles, bodies, error codes |
 | [docs/security-and-limitations.md](docs/security-and-limitations.md) | Security posture and honest known limitations |
+| [AGENTS.md](AGENTS.md) | Agent entry point: service map, repo rules, doc pointers |
+| `apps/*/README.md` | Per-service context: role, port, schema, TCP patterns, commands |
 | [web/README.md](web/README.md) | Frontend app (React + Vite) notes |
 
 ## Prerequisites

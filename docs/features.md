@@ -21,6 +21,7 @@ for routes see [api.md](./api.md).
 | Read employee (`GET /employees/{id}`) | no (403) | yes |
 | Update employee (`PATCH /employees/{id}`) | no (403) | yes |
 | Deactivate employee (`PATCH /employees/{id}/deactivate`) | no (403) | yes |
+| Delete employee (`DELETE /employees/{id}`, INACTIVE only) | no (403) | yes |
 | Attendance list (`GET /attendance`) | no (403) | yes (view-only) |
 | Attendance detail (`GET /attendance/{id}`) | no (403) | yes |
 
@@ -157,7 +158,7 @@ Pages: `/hrd/karyawan` (`web/src/features/employees/EmployeesPage.tsx`),
 
 - **Auth-first order** (ADR-11): load employee → disable login
   (`AUTH_DEACTIVATE_USER` by email, `User.isActive = false`) → flip
-  `Employee.status` to `INACTIVE` (soft delete, row is never removed).
+  `Employee.status` to `INACTIVE` (soft delete, row is never removed; a separate `DELETE /employees/{id}` does remove it).
 - If the auth step fails, the employee row is untouched (safe retry). If the
   row step fails after auth succeeded, the login is already disabled (safe
   direction).
@@ -167,6 +168,23 @@ Pages: `/hrd/karyawan` (`web/src/features/employees/EmployeesPage.tsx`),
     return 403** because the gateway checks `status === ACTIVE` per call.
   - Employee disappears from the default list (`status` filter defaults to
     ACTIVE); HRD can still list them by `status=INACTIVE`.
+
+### Master karyawan: hard delete (`DELETE /employees/{id}`, INACTIVE only)
+
+- **Only an INACTIVE employee** can be deleted; an ACTIVE employee → 400
+  `Deactivate the employee before deleting` (deactivate first).
+- **Auth-first order**, same posture as ADR-11: the INACTIVE gate runs, then
+  the login is deleted (`AUTH_DELETE_USER`, auth-service `deleteMany` by email,
+  idempotent), then the employee row (`EMPLOYEE_HARD_DELETE`).
+  - If the login step fails, the employee row is untouched (safe retry).
+  - If the row step fails after the login succeeded, the employee stays
+    INACTIVE with no login — locked out, retryable.
+- The email is freed: a new `POST /employees` may reuse it.
+- Attendance snapshots are never touched; HRD still reads the deleted
+  employee's history by `employeeId`.
+- A still-valid token from the deleted employee: `/auth/me` → 200 (offline
+  JWT claims) until expiry, `/attendance/*` → 404 (employee lookup fails).
+  There is no JWT revocation.
 
 ### Attendance monitoring (view-only) (`GET /attendance`, `GET /attendance/{id}`)
 
@@ -213,7 +231,7 @@ Employees created from the HRD UI always get `Welcome123!`, returned once by
 | Biometrics | N/A |
 | Message broker / queues / retries | TCP without broker (ADR-1); fail-fast on downtime |
 | Object storage (S3/CDN) for photos | Local disk `UPLOAD_DIR` (ADR-5) |
-| Reactivation of employees | No API route; only deactivate exists |
+| Reactivation of employees | No API route; only deactivate + hard delete (INACTIVE) exist |
 | Password reset / self-service | Accounts are seeded or created by HRD with a one-time password |
 | Multi-company / multi-tenant | Single tenant |
 | Pagination | Lists return full result sets (small demo scale) |

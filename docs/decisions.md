@@ -412,4 +412,50 @@ contract).
 
 ---
 
+## ADR-13: Hard delete for INACTIVE employees only (login deleted too)
+
+**Context.** ADR-11/12 keep master karyawan soft-deleted: deactivation flips
+`Employee.status` to `INACTIVE` and disables the login, and the row is never
+removed. The brief asks for full CRUD including delete, so a real hard delete
+is needed — but deleting an ACTIVE employee, or deleting the employee row while
+leaving an active login, would be unsafe.
+
+**Decision.**
+
+- `DELETE /employees/{id}` (HRD only) hard-deletes the employee.
+- **INACTIVE gate:** the employee must already be INACTIVE; an ACTIVE employee
+  is rejected with 400 `Deactivate the employee before deleting` before any
+  side effect. Enforced in the gateway (`EmployeeService.remove`) and re-checked
+  in employee-service `remove()` as a backstop.
+- **Auth-first order:** `EMPLOYEE_GET_BY_ID` → INACTIVE gate →
+  `AUTH_DELETE_USER { email }` (auth-service `deleteMany`, idempotent) →
+  `EMPLOYEE_HARD_DELETE { id }`. If the row delete fails after the login
+  delete, the employee stays INACTIVE with no login — locked out and retryable,
+  never an active login left behind.
+- A concurrent double-delete (row vanishes between read and delete, Prisma
+  `P2025`) maps to 404, never an unhandled 500.
+- Attendance snapshots (`employeeId`, `employeeName`) are never touched;
+  `DELETE` does not cascade into `attendance_db`, and HRD still reads the
+  deleted employee's history.
+- The login row is gone, so the email is freed for a new employee.
+- **No JWT revocation:** tokens are stateless for 8h. A deleted employee's
+  still-valid token gives `/auth/me` → 200 (offline claims) but `/attendance/*`
+  → 404 (employee lookup fails).
+
+**Consequences.**
+
+- Covered by gateway unit tests (`employee.service.spec.ts`: ordering, INACTIVE
+  gate, auth-failure) and e2e (`app.e2e-spec.ts`: ACTIVE 400,
+  deactivate→delete 200, login 401, email re-creatable, unknown 404, EMPLOYEE
+  403, `/attendance/me` 404, `/auth/me` 200, attendance snapshots survive).
+- Recovery from a half-finished delete (login gone, row present) is **retrying
+  DELETE**, not re-creating the employee.
+- `docs/api.md` documents the route; `tools/assert-docs.cjs` asserts it.
+
+**Alternatives.** Allow deleting any employee (loses the soft-delete safety
+step); delete the employee row only and leave the login (orphan login, email
+never reusable); cascade-delete attendance (destroys the audit-like history).
+
+---
+
 [Index](./README.md) · [Architecture](./architecture.md) · [Features](./features.md) · [Security & limitations](./security-and-limitations.md)

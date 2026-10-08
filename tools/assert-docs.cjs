@@ -19,6 +19,7 @@ const EXPECTED = [
   { method: 'get', path: '/employees/{id}' },
   { method: 'patch', path: '/employees/{id}' },
   { method: 'patch', path: '/employees/{id}/deactivate' },
+  { method: 'delete', path: '/employees/{id}' },
   { method: 'post', path: '/attendance/check-in' },
   { method: 'post', path: '/attendance/check-out' },
   { method: 'get', path: '/attendance/me' },

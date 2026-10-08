@@ -290,6 +290,43 @@ There is **no reactivation endpoint**.
 
 ---
 
+### DELETE /employees/{id}
+
+| | |
+|---|---|
+| Role | **HRD** |
+| Auth | bearer |
+| Params | `id` |
+| Body | none (ignored if sent) |
+
+Hard-deletes an **INACTIVE** employee: deletes the auth login
+(`AUTH_DELETE_USER`, auth-first), then the employee row
+(`EMPLOYEE_HARD_DELETE`). An **ACTIVE** employee is rejected before any
+side effect: soft-delete with `PATCH /employees/{id}/deactivate` first.
+
+**Response** `200`, the deleted employee row.
+
+**Errors**
+
+| Status | When |
+|---|---|
+| 400 | `Deactivate the employee before deleting` (employee still ACTIVE) |
+| 401 / 403 | auth/role |
+| 404 | unknown employee id |
+| 502-class | auth-service failure during login deletion (employee row untouched; retryable) |
+
+Notes:
+
+- The email is freed after a successful delete; a new `POST /employees` may reuse it.
+- Attendance snapshots remain readable; DELETE never touches attendance rows.
+- A still-valid token from the deleted employee keeps working until expiry:
+  `/auth/me` → 200 (JWT claims are offline), `/attendance/*` → 404
+  (employee lookup fails).
+- Half-state (login deleted, employee row still present) is recovered by
+  **retrying DELETE**, not by re-creating the employee.
+
+---
+
 ### POST /attendance/check-in
 
 | | |
@@ -420,6 +457,7 @@ There is no POST/PATCH/DELETE on attendance for any role.
 | GET | `/employees/{id}` | HRD | |
 | PATCH | `/employees/{id}` | HRD | email immutable; no status |
 | PATCH | `/employees/{id}/deactivate` | HRD | soft delete + disable login |
+| DELETE | `/employees/{id}` | HRD | hard delete (INACTIVE only) + delete login |
 | POST | `/attendance/check-in` | EMPLOYEE | multipart `photo` required |
 | POST | `/attendance/check-out` | EMPLOYEE | 409 if nothing open |
 | GET | `/attendance/me` | EMPLOYEE | own history |

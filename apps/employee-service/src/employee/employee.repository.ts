@@ -86,4 +86,9 @@ export class EmployeeRepository {
       data: { status: EmployeeStatus.INACTIVE },
     });
   }
+
+  /** Hard delete: removes the row. Callers enforce the INACTIVE gate. */
+  delete(id: string) {
+    return this.prisma.employee.delete({ where: { id } });
+  }
 }

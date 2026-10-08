@@ -41,4 +41,9 @@ export class EmployeeController {
   deactivate(@Payload() dto: { id: string }) {
     return this.employees.deactivate(dto.id);
   }
+
+  @MessagePattern(TCP_PATTERNS.EMPLOYEE_HARD_DELETE)
+  remove(@Payload() dto: { id: string }) {
+    return this.employees.remove(dto.id);
+  }
 }

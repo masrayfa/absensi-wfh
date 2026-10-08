@@ -8,6 +8,7 @@ import {
   CreateEmployeeDto,
   UpdateEmployeeDto,
   ListEmployeesQueryDto,
+  EmployeeStatus,
 } from '@app/contracts';
 import {
   EmployeeRepository,
@@ -88,6 +89,21 @@ export class EmployeeService {
     return this.employees.deactivate(id);
   }
 
+  async remove(id: string) {
+    const current = await this.employees.findById(id);
+    if (!current) throw new NotFoundException(`Employee ${id} not found`);
+    if (current.status !== EmployeeStatus.INACTIVE) {
+      throw new BadRequestException('Deactivate the employee before deleting');
+    }
+    try {
+      return await this.employees.delete(id);
+    } catch (err) {
+      // Concurrent double-delete: the row vanished between findById and delete.
+      if (isRecordNotFound(err)) throw new NotFoundException(`Employee ${id} not found`);
+      throw err;
+    }
+  }
+
   /** Pre-flight check so the caller gets the offending field, not just P2002. */
   private async assertUnique(employeeNo: string, email: string): Promise<void> {
     const [byNo, byEmail] = await Promise.all([
@@ -109,5 +125,14 @@ function isUniqueViolation(err: unknown): boolean {
     err !== null &&
     'code' in err &&
     (err as { code?: unknown }).code === 'P2002'
+  );
+}
+
+function isRecordNotFound(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code?: unknown }).code === 'P2025'
   );
 }

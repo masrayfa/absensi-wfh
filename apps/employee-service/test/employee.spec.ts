@@ -7,6 +7,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EmployeeStatus, CreateEmployeeDto } from '@app/contracts';
 import { AppModule } from '../src/app.module';
 import { EmployeeService } from '../src/employee/employee.service';
+import { EmployeeRepository } from '../src/employee/employee.repository';
 import { PrismaService } from '../src/prisma/prisma.service';
 
 /** A fresh employee number/email per run so the suite is re-runnable. */
@@ -136,6 +137,37 @@ describe('employee-service (against real employee_db)', () => {
     }
   });
 
+  it('remove: rejects ACTIVE, succeeds after deactivate, then getById is gone', async () => {
+    const suffix = uniqueSuffix();
+    const email = `t09-${suffix}@dexa.test`;
+    try {
+      const created = await employees.create(newEmployee(`T09-${suffix}`, email));
+
+      await expect(employees.remove(created.id)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      await expect(employees.getById(created.id)).resolves.toMatchObject({
+        id: created.id,
+      });
+
+      await employees.deactivate(created.id);
+      await expect(employees.remove(created.id)).resolves.toMatchObject({
+        id: created.id,
+      });
+      await expect(employees.getById(created.id)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    } finally {
+      await prisma.employee.deleteMany({ where: { email } });
+    }
+  });
+
+  it('remove: unknown id -> NotFoundException', async () => {
+    await expect(
+      employees.remove('00000000-0000-4000-8000-000000000000'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
   it('returns NotFoundException for unknown id and email', async () => {
     await expect(employees.getById('00000000-0000-4000-8000-000000000000')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -143,5 +175,19 @@ describe('employee-service (against real employee_db)', () => {
     await expect(employees.getByEmail('ghost@dexa.test')).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+});
+
+describe('EmployeeService.remove (fake repository)', () => {
+  it('maps a concurrent Prisma P2025 to NotFoundException', async () => {
+    const fakeRepo = {
+      findById: async () => ({ id: 'e1', status: EmployeeStatus.INACTIVE }),
+      delete: async () => {
+        throw { code: 'P2025' };
+      },
+    } as unknown as EmployeeRepository;
+
+    const service = new EmployeeService(fakeRepo);
+    await expect(service.remove('e1')).rejects.toBeInstanceOf(NotFoundException);
   });
 });

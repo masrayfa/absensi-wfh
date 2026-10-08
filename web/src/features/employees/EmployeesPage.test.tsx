@@ -12,7 +12,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api')>();
   return {
     ...actual,
-    api: { get: vi.fn(), post: vi.fn(), patch: vi.fn() },
+    api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
   };
 });
 
@@ -21,6 +21,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const get = vi.mocked(api.get);
 const post = vi.mocked(api.post);
 const patch = vi.mocked(api.patch);
+const del = vi.mocked(api.delete);
 
 const BUDI: Employee = {
   id: 'emp-budi',
@@ -44,6 +45,18 @@ const RINA: Employee = {
   phone: null,
   joinDate: '2024-02-01T00:00:00.000Z',
   status: 'ACTIVE',
+};
+
+const SITI: Employee = {
+  id: 'emp-siti',
+  employeeNo: 'EMP-003',
+  fullName: 'Siti Aminah',
+  email: 'siti@dexa.test',
+  department: 'Finance',
+  position: 'Staff',
+  phone: '0812000003',
+  joinDate: '2024-01-20T00:00:00.000Z',
+  status: 'INACTIVE',
 };
 
 function renderPage() {
@@ -74,6 +87,7 @@ beforeEach(() => {
   get.mockReset();
   post.mockReset();
   patch.mockReset();
+  del.mockReset();
   vi.mocked(toast.success).mockReset();
   vi.mocked(toast.error).mockReset();
 });
@@ -204,5 +218,33 @@ describe('EmployeesPage', () => {
     );
     await waitFor(() => expect(screen.queryByText('Budi Santoso')).not.toBeInTheDocument());
     expect(toast.success).toHaveBeenCalledWith('Budi Santoso dinonaktifkan');
+  });
+
+  it('hard-deletes an INACTIVE employee after confirm and refreshes the list', async () => {
+    get.mockResolvedValueOnce({ data: [SITI] } as never).mockResolvedValue({ data: [] } as never);
+    del.mockResolvedValue({ data: SITI } as never);
+    renderPage();
+
+    const user = userEvent.setup();
+    await screen.findByText('Siti Aminah');
+    await user.click(screen.getByRole('button', { name: 'Hapus Siti Aminah' }));
+
+    expect(await screen.findByText('Hapus karyawan permanen?')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Ya, hapus' }));
+
+    await waitFor(() => expect(del).toHaveBeenCalledWith('/employees/emp-siti'));
+    expect(toast.success).toHaveBeenCalledWith('Siti Aminah dihapus');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText('Siti Aminah')).not.toBeInTheDocument();
+  });
+
+  it('never offers hard delete for an ACTIVE employee', async () => {
+    get.mockResolvedValue({ data: [BUDI] } as never);
+    renderPage();
+
+    await screen.findByText('Budi Santoso');
+    expect(screen.queryByRole('button', { name: 'Hapus Budi Santoso' })).not.toBeInTheDocument();
+    expect(del).not.toHaveBeenCalled();
   });
 });

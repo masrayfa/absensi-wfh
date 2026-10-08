@@ -1,4 +1,4 @@
-import { PencilIcon, PlusIcon, SearchIcon, UserRoundXIcon } from 'lucide-react';
+import { PencilIcon, PlusIcon, SearchIcon, Trash2Icon, UserRoundXIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -39,6 +39,7 @@ import {
 import { EmployeeFormDialog } from '@/features/employees/EmployeeFormDialog';
 import {
   useDeactivateEmployee,
+  useDeleteEmployee,
   useEmployees,
   type Employee,
   type EmployeeStatus,
@@ -61,10 +62,12 @@ export function EmployeesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [deactivating, setDeactivating] = useState<Employee | null>(null);
+  const [deleting, setDeleting] = useState<Employee | null>(null);
 
   const debouncedSearch = useDebouncedValue(search.trim());
   const { data: employees, isLoading, isError, refetch } = useEmployees(debouncedSearch, status);
   const deactivate = useDeactivateEmployee();
+  const deleteEmployee = useDeleteEmployee();
 
   function openCreate() {
     setEditing(null);
@@ -85,6 +88,17 @@ export function EmployeesPage() {
       },
       onError: (error) =>
         toast.error(apiErrorMessage(error, 'Gagal menonaktifkan karyawan')),
+    });
+  }
+
+  function confirmDelete() {
+    if (!deleting) return;
+    deleteEmployee.mutate(deleting.id, {
+      onSuccess: (deleted) => {
+        toast.success(`${deleted.fullName} dihapus`);
+        setDeleting(null);
+      },
+      onError: (error) => toast.error(apiErrorMessage(error, 'Gagal menghapus karyawan')),
     });
   }
 
@@ -191,6 +205,17 @@ export function EmployeesPage() {
                           <UserRoundXIcon /> Nonaktifkan
                         </Button>
                       )}
+                      {employee.status === 'INACTIVE' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          aria-label={`Hapus ${employee.fullName}`}
+                          onClick={() => setDeleting(employee)}
+                        >
+                          <Trash2Icon /> Hapus
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -232,6 +257,31 @@ export function EmployeesPage() {
             </Button>
             <Button variant="destructive" onClick={confirmDeactivate} disabled={deactivate.isPending}>
               {deactivate.isPending ? 'Memproses...' : 'Ya, nonaktifkan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deleting)}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Hapus karyawan permanen?</DialogTitle>
+            <DialogDescription>
+              {deleting?.fullName} beserta akun login-nya akan dihapus permanen. Data karyawan
+              dan login tidak bisa dikembalikan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleting(null)} disabled={deleteEmployee.isPending}>
+              Batal
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleteEmployee.isPending}>
+              {deleteEmployee.isPending ? 'Menghapus...' : 'Ya, hapus'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -80,3 +80,11 @@ export function useDeactivateEmployee() {
     onSuccess: invalidate,
   });
 }
+
+export function useDeleteEmployee() {
+  const invalidate = useInvalidateEmployees();
+  return useMutation({
+    mutationFn: async (id: string) => (await api.delete<Employee>(`/employees/${id}`)).data,
+    onSuccess: invalidate,
+  });
+}

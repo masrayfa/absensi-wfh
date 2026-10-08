@@ -197,6 +197,28 @@ Effect after deactivation (even with a still-valid 8h JWT):
 - Employee list: excluded by default (`status` filter defaults to ACTIVE);
   visible with `?status=INACTIVE`.
 
+## Flow 5b: Hard delete (INACTIVE only)
+
+```
+DELETE /employees/{id}   [RolesGuard: HRD]
+  → gateway employee.service.ts  remove(id)
+       1. EMPLOYEE_GET_BY_ID { id }      → 404 if missing
+       2. INACTIVE gate                  → 400 `Deactivate the employee before deleting`
+                                           (only when status is not INACTIVE)
+       3. AUTH_DELETE_USER { email }     → user.deleteMany({ email })  // idempotent
+       4. EMPLOYEE_HARD_DELETE { id }    → row delete; concurrent vanish → 404
+  ← deleted Employee row
+```
+
+Order is asserted by `apps/api-gateway/test/employee.service.spec.ts`
+(`EmployeeService.remove` block). employee-service `remove()` re-checks the
+INACTIVE gate itself and maps a concurrent P2025 row vanish to 404.
+
+The INACTIVE gate runs before the login delete (same auth-first posture as
+Flow 5): if step 3 fails the row is untouched (safe retry). If step 4 fails
+after step 3, the employee stays INACTIVE with no login, locked out and
+retryable, never an active login left behind.
+
 ## Flow 6: HRD monitoring list / get
 
 ```

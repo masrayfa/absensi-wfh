@@ -133,7 +133,7 @@ model Employee {
   position   String
   phone      String?
   joinDate   DateTime       @db.Date
-  status     EmployeeStatus @default(ACTIVE) // ACTIVE | INACTIVE (soft delete)
+  status     EmployeeStatus @default(ACTIVE) // ACTIVE | INACTIVE (soft delete; hard delete only from INACTIVE)
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 }
@@ -180,8 +180,9 @@ model Attendance {
 
 What keeps it from being a distributed monolith in disguise: the gateway has
 **no repository layer and no DB**; it only orchestrates `ClientProxy.send`
-calls. Domain rules (uniqueness, idempotency, WIB dates, soft-delete) live in
-the owning services, not in shared tables or shared SQL.
+calls. Domain rules (uniqueness, idempotency, WIB dates, soft-delete, hard
+delete gated on INACTIVE) live in the owning services, not in shared tables or
+shared SQL.
 
 What it is *not*: no broker, no retries/queues, no service-to-service auth, one
 MySQL instance for the three schemas. Those trade-offs are recorded in

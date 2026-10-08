@@ -121,15 +121,15 @@ pnpm -r test          # backend Jest + web Vitest
 
 | Suite | Runner | What it covers | Count (verified) |
 |---|---|---|---|
-| `apps/auth-service/test/auth.spec.ts` | Jest | login, JWT claims, uniform 401, create_user hash cost 12, deactivate | 5 |
-| `apps/employee-service/test/employee.spec.ts` | Jest | CRUD, unique conflicts, soft-delete list filter, immutable email, 404s | 6 |
+| `apps/auth-service/test/auth.spec.ts` | Jest | login, JWT claims, uniform 401, create_user hash cost 12, deactivate, hard-delete by email (idempotent) | 6 |
+| `apps/employee-service/test/employee.spec.ts` | Jest | CRUD, unique conflicts, soft-delete list filter, immutable email, 404s, hard delete (INACTIVE gate, P2025 → 404) | 9 |
 | `apps/attendance-service/test/attendance.spec.ts` | Jest | parallel check-in idempotency, check-out conflicts, WIB date, filters | 5 |
-| `apps/api-gateway/test/app.e2e-spec.ts` | Jest + Supertest | real gateway + real TCP services in-process | 13 (incl. `it.each` cases) |
-| `apps/api-gateway/test/employee.service.spec.ts` | Jest | deactivate ordering + auth-failure propagation (mocked clients) | 2 |
-| `web/src/features/**\/*.test.tsx` | Vitest + RTL | login redirects, check-in/out UI, employee CRUD UI, monitoring filters/preview | 23 |
+| `apps/api-gateway/test/app.e2e-spec.ts` | Jest + Supertest | real gateway + real TCP services in-process | 20 (incl. `it.each` cases) |
+| `apps/api-gateway/test/employee.service.spec.ts` | Jest | deactivate + hard-delete ordering, INACTIVE gate, auth-failure propagation (mocked clients) | 5 |
+| `web/src/features/**\/*.test.tsx` | Vitest + RTL | login redirects, check-in/out UI, employee CRUD UI (incl. hard delete), monitoring filters/preview | 25 |
 
-Gateway total: **17 across 2 suites** (15 e2e cases including `it.each`
-expansions, plus 2 unit tests in `employee.service.spec.ts`). `pnpm -r test`
+Gateway total: **25 across 2 suites** (20 e2e cases including `it.each`
+expansions, plus 5 unit tests in `employee.service.spec.ts`). `pnpm -r test`
 runs backend suites serialized and web in parallel (separate processes).
 
 ### Backend test isolation (`tools/backend-test.cjs`)
@@ -176,7 +176,7 @@ node tools/assert-docs.cjs            # gateway must be running
 node tools/assert-docs.cjs --base-url http://localhost:3000 --timeout 60
 ```
 
-Fetches `/docs-json` and asserts all 13 expected operations exist, are tagged,
+Fetches `/docs-json` and asserts all 14 expected operations exist, are tagged,
 have summaries, and declare bearer auth unless deliberately public
 (`tools/assert-docs.cjs` `EXPECTED` list). Exits non-zero on any miss.
 
@@ -258,7 +258,7 @@ apps/auth-service/src/
   main.ts                 TCP bootstrap + RpcHttpExceptionFilter
   auth/auth.service.ts    bcrypt cost 12, Welcome123!, uniform 401, JWT sign
   user/user.repository.ts
-apps/employee-service/src/employee/   service + repository (soft delete, email immutability)
+apps/employee-service/src/employee/   service + repository (soft delete, hard delete gated on INACTIVE, email immutability)
 apps/attendance-service/src/attendance/  WIB date, P2002 idempotency, atomic check-out
 libs/contracts/src/       patterns.ts, enums, dto
 libs/common/src/          guards, decorators, filters, config, wib.ts

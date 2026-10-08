@@ -35,7 +35,7 @@ Agents: start at [AGENTS.md](../AGENTS.md) — short service map, repo rules, an
 ## Repo layout
 
 ```
-dexa-group-takehome-test/
+absensi-wfh/
 ├── apps/
 │   ├── api-gateway/          HTTP :3000, auth, employees, attendance, uploads, Swagger
 │   ├── auth-service/         TCP :4001, users, bcrypt, JWT issue/validate/deactivate

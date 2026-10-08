@@ -1,7 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
   CreateEmployeeDto,
+  EmployeeStatus,
   ListEmployeesQueryDto,
   TCP_PATTERNS,
   UpdateEmployeeDto,
@@ -96,6 +97,27 @@ export class EmployeeService {
     );
     return firstValueFrom(
       this.employees.send<Employee>(TCP_PATTERNS.EMPLOYEE_DEACTIVATE, { id }),
+    );
+  }
+
+  /**
+   * Hard-deletes an INACTIVE employee and their login. The INACTIVE gate runs
+   * BEFORE the login delete: if auth succeeds but the row delete fails, the
+   * employee stays INACTIVE with no login — locked out and retryable, never an
+   * active login left behind. Mirrors deactivate's auth-first ordering.
+   */
+  async remove(id: string): Promise<Employee> {
+    const employee = await firstValueFrom(
+      this.employees.send<Employee>(TCP_PATTERNS.EMPLOYEE_GET_BY_ID, { id }),
+    );
+    if (employee.status !== EmployeeStatus.INACTIVE) {
+      throw new BadRequestException('Deactivate the employee before deleting');
+    }
+    await firstValueFrom(
+      this.auth.send(TCP_PATTERNS.AUTH_DELETE_USER, { email: employee.email }),
+    );
+    return firstValueFrom(
+      this.employees.send<Employee>(TCP_PATTERNS.EMPLOYEE_HARD_DELETE, { id }),
     );
   }
 

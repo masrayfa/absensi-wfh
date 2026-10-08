@@ -244,6 +244,114 @@ describe('api-gateway e2e (real gateway -> real TCP services -> isolated MySQL t
         status: EmployeeStatus.ACTIVE,
       });
     });
+
+    it('refuses to DELETE an ACTIVE employee and leaves the row intact', async () => {
+      const tag = unique('del-active');
+      const { employee } = await createEmployeeWithLogin(tag);
+
+      await api.delete(`/employees/${employee.id}`).set(auth(hrdToken)).expect(400);
+
+      const still = await api
+        .get(`/employees/${employee.id}`)
+        .set(auth(hrdToken))
+        .expect(200);
+      expect((still.body as EmployeeRow).status).toBe(EmployeeStatus.ACTIVE);
+    });
+
+    it('hard-deletes an INACTIVE employee: login gone, email freed, stale token 404 on /attendance/me but 200 on /auth/me', async () => {
+      const tag = unique('del-happy');
+      const email = `${tag}@dexa.test`;
+      const { employee, token } = await createEmployeeWithLogin(tag);
+
+      await api
+        .patch(`/employees/${employee.id}/deactivate`)
+        .set(auth(hrdToken))
+        .expect(200);
+
+      const deleted = await api
+        .delete(`/employees/${employee.id}`)
+        .set(auth(hrdToken))
+        .expect(200);
+      expect(deleted.body).toMatchObject({
+        id: employee.id,
+        email,
+        status: EmployeeStatus.INACTIVE,
+      });
+
+      // The login row is gone: the old one-time password no longer authenticates.
+      await api
+        .post('/auth/login')
+        .send({ email, password: DEFAULT_PASSWORD })
+        .expect(401);
+
+      // The JWT is verified offline, so it stays valid — but the employee row is
+      // gone, so employee-scoped attendance 404s while /auth/me serves claims.
+      await api.get('/attendance/me').set(auth(token)).expect(404);
+      await api.get('/auth/me').set(auth(token)).expect(200);
+
+      // The email is freed: the same address can back a brand-new employee.
+      const recreated = await api
+        .post('/employees')
+        .set(auth(hrdToken))
+        .send(employeePayload(`T17-${tag}-re`, email))
+        .expect(201);
+      const recreatedRow = recreated.body as EmployeeRow;
+      expect(recreatedRow.email).toBe(email);
+      expect(recreatedRow.id).not.toBe(employee.id);
+    });
+
+    it('DELETE an unknown id returns 404', async () => {
+      await api
+        .delete('/employees/00000000-0000-0000-0000-000000000000')
+        .set(auth(hrdToken))
+        .expect(404);
+    });
+
+    it('EMPLOYEE token cannot DELETE an employee (403) and changes nothing', async () => {
+      const tag = unique('del-role');
+      const { employee, token } = await createEmployeeWithLogin(tag);
+      await api
+        .patch(`/employees/${employee.id}/deactivate`)
+        .set(auth(hrdToken))
+        .expect(200);
+
+      await api.delete(`/employees/${employee.id}`).set(auth(token)).expect(403);
+
+      await api.get(`/employees/${employee.id}`).set(auth(hrdToken)).expect(200);
+    });
+
+    it('deleting an employee keeps their attendance snapshots readable by HRD', async () => {
+      const tag = unique('del-att');
+      const { employee, token } = await createEmployeeWithLogin(tag);
+
+      const checkedIn = await api
+        .post('/attendance/check-in')
+        .set(auth(token))
+        .attach('photo', PNG_1X1, {
+          filename: 'checkin.png',
+          contentType: 'image/png',
+        })
+        .expect(201);
+      const attendanceId = (checkedIn.body as AttendanceRow).id;
+
+      await api
+        .patch(`/employees/${employee.id}/deactivate`)
+        .set(auth(hrdToken))
+        .expect(200);
+      await api
+        .delete(`/employees/${employee.id}`)
+        .set(auth(hrdToken))
+        .expect(200);
+
+      const listed = await api
+        .get('/attendance')
+        .query({ employeeId: employee.id })
+        .set(auth(hrdToken))
+        .expect(200);
+      expect((listed.body as AttendanceRow[]).map((row) => row.id)).toContain(
+        attendanceId,
+      );
+    });
   });
 
   describe('attendance', () => {

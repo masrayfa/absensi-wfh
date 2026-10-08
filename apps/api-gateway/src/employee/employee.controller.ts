@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from '@app/common';
 import {
@@ -47,5 +56,13 @@ export class EmployeeController {
   @ApiOperation({ summary: 'Deactivate an employee and their login (HRD only)' })
   deactivate(@Param('id') id: string) {
     return this.employees.deactivate(id);
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Hard-delete an INACTIVE employee and their login (HRD only)',
+  })
+  remove(@Param('id') id: string) {
+    return this.employees.remove(id);
   }
 }

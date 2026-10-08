@@ -104,6 +104,21 @@ describe('auth-service (against real auth_db)', () => {
     }
   });
 
+  it('hard-deletes a user by email, then is a no-op on the second call', async () => {
+    const email = `t02-delete-${Date.now()}@dexa.test`;
+    try {
+      await auth.createUser({ email });
+
+      await expect(auth.deleteUser({ email })).resolves.toEqual({ email, deleted: 1 });
+      expect(await prisma.user.findUnique({ where: { email } })).toBeNull();
+
+      // Idempotent: missing email must not throw.
+      await expect(auth.deleteUser({ email })).resolves.toEqual({ email, deleted: 0 });
+    } finally {
+      await prisma.user.deleteMany({ where: { email } });
+    }
+  });
+
   it('rejects login for a deactivated user', async () => {
     const email = `t06-inactive-${Date.now()}@dexa.test`;
     try {

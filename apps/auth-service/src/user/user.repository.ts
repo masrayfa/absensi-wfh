@@ -25,4 +25,9 @@ export class UserRepository {
       data: { isActive: false },
     });
   }
+
+  /** Idempotent: returns how many rows matched, never throws on a missing email. */
+  deleteByEmail(email: string) {
+    return this.prisma.user.deleteMany({ where: { email } });
+  }
 }

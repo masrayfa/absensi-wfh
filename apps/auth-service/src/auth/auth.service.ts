@@ -97,6 +97,11 @@ export class AuthService {
     await this.users.deactivateByEmail(email);
     return { email, isActive: false };
   }
+
+  async deleteUser({ email }: { email: string }): Promise<{ email: string; deleted: number }> {
+    const { count } = await this.users.deleteByEmail(email);
+    return { email, deleted: count };
+  }
 }
 
 function isUniqueViolation(err: unknown): boolean {

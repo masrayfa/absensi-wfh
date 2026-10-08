@@ -26,4 +26,9 @@ export class AuthController {
   deactivateUser(@Payload() dto: { email: string }) {
     return this.auth.deactivateUser(dto);
   }
+
+  @MessagePattern(TCP_PATTERNS.AUTH_DELETE_USER)
+  deleteUser(@Payload() dto: { email: string }) {
+    return this.auth.deleteUser(dto);
+  }
 }

@@ -6,6 +6,8 @@ import { defineConfig } from 'vite';
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Fail loudly instead of drifting to 5174+ — WEB_ORIGIN/CORS expects 5173.
+  strictPort: true,
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

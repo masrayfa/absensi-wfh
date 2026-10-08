@@ -77,7 +77,12 @@ export function LoginPage() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" autoComplete="email" placeholder="nama@dexa.test" {...field} />
+                      <Input
+                        type="email"
+                        autoComplete="email"
+                        placeholder="nama@dexa.test"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

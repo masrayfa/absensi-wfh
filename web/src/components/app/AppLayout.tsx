@@ -1,3 +1,5 @@
+import { Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -17,6 +19,7 @@ const HRD_LINKS = [
 export function AppLayout() {
   const session = useSession();
   const navigate = useNavigate();
+  const { resolvedTheme, setTheme } = useTheme();
 
   if (!session) return null;
 
@@ -49,6 +52,15 @@ export function AppLayout() {
             <span className="hidden text-sm text-muted-foreground sm:inline">
               {session.user.email}
             </span>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Ganti tema"
+              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+            >
+              <Sun className="hidden dark:block" />
+              <Moon className="block dark:hidden" />
+            </Button>
             <Button
               variant="outline"
               size="sm"
